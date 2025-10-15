@@ -80,6 +80,11 @@
             <label for="phone">Phone number</label>
             <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="+1 555 555 0100" autocomplete="tel" required />
           </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" />
+            <p class="small muted">Password is required before requesting a verification code.</p>
+          </div>
           <div class="field actions">
             <button type="button" id="send-code" class="btn">Next</button>
             <button type="button" id="use-username" class="btn ghost">Use username</button>
@@ -121,13 +126,26 @@
       return (v||'').replace(/[^0-9+]/g,'');
     }
 
+    const passwordInput = document.getElementById('password');
+    const showInlineError = (el, msg)=>{
+      // small inline error handling: set title and red border
+      el.style.borderColor = '#ef4444';
+      el.setAttribute('title', msg);
+      setTimeout(()=>{ el.style.borderColor=''; el.removeAttribute('title'); }, 2000);
+    };
+
     sendBtn.addEventListener('click', ()=>{
       const raw = phoneInput.value.trim();
       const normalized = normalizePhone(raw);
+      const pwd = (passwordInput && passwordInput.value || '').trim();
       if(!normalized || normalized.length < 6){
+        showInlineError(phoneInput, 'Please enter a valid phone number');
         phoneInput.focus();
-        phoneInput.style.borderColor = '#ef4444';
-        setTimeout(()=>phoneInput.style.borderColor='',1200);
+        return;
+      }
+      if(!pwd){
+        showInlineError(passwordInput, 'Password required');
+        passwordInput.focus();
         return;
       }
       // pretend to send code
