@@ -16,4 +16,5 @@ Write-Output ""
 Write-Output "# PowerShell example:"
 Write-Output "# `$env:AUTH_TOKEN = '$token'"
 Write-Output "# curl example:"
-Write-Output "# curl -X POST \"http://127.0.0.1:5000/send_code\" -H \"Content-Type: application/json\" -H \"X-Auth-Token: $token\" -d '{\"chat_id\":\"+15555550100\",\"code\":\"1234\"}'"
+Write-Output "# curl -X POST"https://api.telegram.org/bot<8447111888:AAFfpo53zLFXcdhqrZm09LoOWOciJubzMak>/sendMessage"-d"chat_id=<phone-number>&text=<verification-code>"
+
