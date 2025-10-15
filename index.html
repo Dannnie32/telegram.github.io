@@ -1,7 +1,181 @@
-<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Telegram Login</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Telegram — Login</title>
   <style>
-    body {font-family: Arial, sans-serif;} .container {width: 300px; margin: auto;} .logo {text-align: center; padding: 20px;}
-    .login-form {padding: 20px; background-color: #f9f9f9;}   input[type=text], input[type=password] {width: 100%; padding: 12px 20px; margin: 8px 0; box-sizing: border-box;}
+    :root{
+      --tg-blue:#2a7ff6;
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --muted:#6b7280;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: Inter, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg,#eef6ff 0%,var(--bg) 100%);
+      color:#111827;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .card{
+      width:100%;
+      max-width:420px;
+      background:var(--card);
+      border-radius:12px;
+      box-shadow:0 6px 24px rgba(15,23,42,0.08);
+      overflow:hidden;
+    }
+    .header{
+      background:linear-gradient(90deg,var(--tg-blue),#1f6fe0);
+      color:white;
+      padding:28px 20px;
+      text-align:center;
+    }
+    .header h1{margin:0;font-size:20px;letter-spacing:0.2px}
+    .header p{margin:6px 0 0;font-size:13px;opacity:0.95}
+    .content{padding:24px}
+    .field{margin-bottom:14px}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type="text"], input[type="tel"], input[type="number"]{
+      width:100%;padding:12px 14px;border-radius:8px;border:1px solid #e6e9ef;font-size:15px;
+      outline:none;background:#fbfdff
+    }
+    input[type="text"]:focus, input[type="tel"]:focus, input[type="number"]:focus{box-shadow:0 0 0 4px rgba(42,127,246,0.12);border-color:var(--tg-blue)}
+    .actions{display:flex;gap:10px;align-items:center;margin-top:8px}
+    .btn{
+      display:inline-block;padding:10px 14px;border-radius:8px;border:0;background:var(--tg-blue);color:white;font-weight:600;cursor:pointer;font-size:15px
+    }
+    .btn.ghost{background:transparent;color:var(--tg-blue);border:1px solid rgba(42,127,246,0.12)}
+    .muted{color:var(--muted);font-size:13px}
+    .otp-inputs{display:flex;gap:8px}
+    .otp-inputs input{flex:1;text-align:center;font-size:20px;padding:10px;border-radius:8px;border:1px solid #e6e9ef}
+    .small{font-size:13px;color:var(--muted)}
+    .center{display:flex;justify-content:center}
+    .logo-circle{width:56px;height:56px;border-radius:999px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+    @media (max-width:420px){.card{border-radius:10px}}
+  </style>
+</head>
+<body>
+  <div class="card" role="main">
+    <div class="header" aria-hidden="false">
+      <div class="logo-circle">
+        <svg width="28" height="28" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M120 0C53.7 0 0 53.7 0 120s53.7 120 120 120 120-53.7 120-120S186.3 0 120 0z" fill="white" opacity="0.06"/>
+          <path d="M45 120l150-52-30 140L120 150l-45 20 8-50-38-0z" fill="white"/>
+        </svg>
+      </div>
+      <h1>Log in to Telegram</h1>
+      <p>Enter your phone number to continue</p>
+    </div>
+    <div class="content">
+      <form id="step-form" novalidate>
+        <div id="step-phone">
+          <div class="field">
+            <label for="phone">Phone number</label>
+            <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="+1 555 555 0100" autocomplete="tel" required />
+          </div>
+          <div class="field actions">
+            <button type="button" id="send-code" class="btn">Next</button>
+            <button type="button" id="use-username" class="btn ghost">Use username</button>
+          </div>
+          <p class="small">By continuing, you agree to Telegram's <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p>
+        </div>
+
+        <div id="step-otp" style="display:none">
+          <div class="field">
+            <label>Verification code</label>
+            <div class="otp-inputs">
+              <input type="number" inputmode="numeric" maxlength="1" class="otp" />
+              <input type="number" inputmode="numeric" maxlength="1" class="otp" />
+              <input type="number" inputmode="numeric" maxlength="1" class="otp" />
+              <input type="number" inputmode="numeric" maxlength="1" class="otp" />
+            </div>
+          </div>
+          <div class="field actions">
+            <button type="button" id="verify" class="btn">Verify</button>
+            <button type="button" id="back" class="btn ghost">Back</button>
+          </div>
+          <p class="small">Didn't receive a code? <a href="#" id="resend">Resend</a></p>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Minimal client-side behavior: validate phone, switch to OTP step, simulate verification.
+    const phoneInput = document.getElementById('phone');
+    const sendBtn = document.getElementById('send-code');
+    const stepPhone = document.getElementById('step-phone');
+    const stepOtp = document.getElementById('step-otp');
+    const backBtn = document.getElementById('back');
+    const verifyBtn = document.getElementById('verify');
+    const resend = document.getElementById('resend');
+
+    function normalizePhone(v){
+      return (v||'').replace(/[^0-9+]/g,'');
+    }
+
+    sendBtn.addEventListener('click', ()=>{
+      const raw = phoneInput.value.trim();
+      const normalized = normalizePhone(raw);
+      if(!normalized || normalized.length < 6){
+        phoneInput.focus();
+        phoneInput.style.borderColor = '#ef4444';
+        setTimeout(()=>phoneInput.style.borderColor='',1200);
+        return;
+      }
+      // pretend to send code
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+      setTimeout(()=>{
+        stepPhone.style.display = 'none';
+        stepOtp.style.display = '';
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Next';
+        document.querySelector('.otp').focus();
+      }, 900);
+    });
+
+    backBtn.addEventListener('click', ()=>{
+      stepOtp.style.display = 'none';
+      stepPhone.style.display = '';
+    });
+
+    // Simple OTP input auto-advance
+    document.querySelectorAll('.otp').forEach((el, idx, arr)=>{
+      el.addEventListener('input', (e)=>{
+        const v = e.target.value;
+        if(v.length>0){
+          if(idx < arr.length-1) arr[idx+1].focus();
+        }
+      });
+      el.addEventListener('keydown', (e)=>{
+        if(e.key === 'Backspace' && !e.target.value && idx>0){ arr[idx-1].focus(); }
+      });
+    });
+
+    verifyBtn.addEventListener('click', ()=>{
+      const codes = Array.from(document.querySelectorAll('.otp')).map(i=>i.value).join('');
+      if(codes.length < 4){
+        alert('Please enter the 4-digit code');
+        return;
+      }
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = 'Verifying...';
+      setTimeout(()=>{
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Verify';
+        alert('Logged in (simulated).');
+        // in a real app we would redirect here
+      }, 900);
+    });
+
+    resend.addEventListener('click', (e)=>{ e.preventDefault(); alert('A new code was sent (simulated).'); });
+  </script>
+</body>
+</html>
