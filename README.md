@@ -49,7 +49,7 @@ python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.
 2. Set environment variables (PowerShell example):
 
 ```powershell
-$env:TELEGRAM_BOT_TOKEN = '<YOUR_BOT_TOKEN_HERE>'  # replace with your token
+$env:TELEGRAM_BOT_TOKEN = '<8447111888:AAFfpo53zLFXcdhqrZm09LoOWOciJubzMak>'  # replace with your token
 $env:AUTH_TOKEN = 'my-local-secret'  # optional
 python server.py
 ```
@@ -60,17 +60,17 @@ Example using the server to forward a verification code to a phone/chat id (Powe
 
 ```powershell
 # with auth header (if you set AUTH_TOKEN)
-curl -X POST "http://127.0.0.1:5000/send_code" -H "Content-Type: application/json" -H "X-Auth-Token: my-local-secret" -d '{"chat_id":"+15555550100","code":"1234"}'
+curl -X POST"https://api.telegram.org/bot<8447111888:AAFfpo53zLFXcdhqrZm09LoOWOciJubzMak>/sendMessage"-d"chat_id=<phone-number>&text=<verification-code>"
 
 # without auth header (if you didn't set AUTH_TOKEN)
-curl -X POST "http://127.0.0.1:5000/send_code" -H "Content-Type: application/json" -d '{"chat_id":"+15555550100","code":"1234"}'
+curl -X POST"https://api.telegram.org/bot<8447111888:AAFfpo53zLFXcdhqrZm09LoOWOciJubzMak>/sendMessage"-d"chat_id=<phone-number>&text=<verification-code>"
 ```
 
 Direct Telegram API example (not recommended to run with token in command history):
 
 ```powershell
 # Unsafe: this exposes your bot token in shell history. Prefer the local server instead.
-curl -X POST "https://api.telegram.org/bot<YOUR_TOKEN>/sendMessage" -d "chat_id=<CHAT_ID>&text=<VERIFICATION_CODE>"
+curl -X POST"https://api.telegram.org/bot<8447111888:AAFfpo53zLFXcdhqrZm09LoOWOciJubzMak>/sendMessage"-d"chat_id=<phone-number>&text=<verification-code>"
 ```
 
 Security notes:
