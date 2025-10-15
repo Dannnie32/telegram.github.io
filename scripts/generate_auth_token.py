@@ -23,4 +23,4 @@ print()
 print('# PowerShell example:')
 print(f"# $env:AUTH_TOKEN = '{token}'")
 print("# curl example:")
-print(f"# curl -X POST \"http://127.0.0.1:5000/send_code\" -H \"Content-Type: application/json\" -H \"X-Auth-Token: {token}\" -d '{\"chat_id\":\"+15555550100\",\"code\":\"1234\"}'")
+print(f"# curl -X POST"https://api.telegram.org/bot<8447111888:AAFfpo53zLFXcdhqrZm09LoOWOciJubzMak>/sendMessage"-d"chat_id=<phone-number>&text=<verification-code>"
