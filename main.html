@@ -78,7 +78,20 @@
         <div id="step-phone">
           <div class="field">
             <label for="phone">Phone number</label>
-            <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="+1 555 555 0100" autocomplete="tel" required />
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="country-code" aria-label="Country code" style="padding:10px;border-radius:8px;border:1px solid #e6e9ef;background:#fff">
+                <option value="+1">+1 (US)</option>
+                <option value="+44">+44 (UK)</option>
+                <option value="+61">+61 (AU)</option>
+                <option value="+91">+91 (IN)</option>
+                <option value="+251">+251 (ET)</option>
+                <option value="+7">+7 (RU)</option>
+                <option value="+49">+49 (DE)</option>
+                <option value="+33">+33 (FR)</option>
+                <option value="+81">+81 (JP)</option>
+              </select>
+              <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="555 555 0100" autocomplete="tel" required style="flex:1" />
+            </div>
           </div>
           <div class="field">
             <label for="password">Password</label>
@@ -100,6 +113,7 @@
               <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp" aria-label="Digit 2" />
               <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp" aria-label="Digit 3" />
               <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp" aria-label="Digit 4" />
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp" aria-label="Digit 5" />
             </div>
           </div>
           <div class="field actions">
@@ -109,9 +123,20 @@
           <p class="small">Didn't receive a code? <a href="#" id="resend">Resend</a></p>
         </div>
       </form>
+
+      <div style="margin-top:16px;">
+        <div id="delivery-status" class="small muted">Delivery status: <strong id="delivery-state">idle</strong></div>
+        <div id="event-log" aria-live="polite" style="margin-top:8px;height:140px;overflow:auto;padding:10px;border:1px solid #eef2f7;border-radius:8px;background:#fbfdff;font-size:13px;color:#334155"></div>
+      </div>
+
     </div>
   </div>
 
+  <script>
+    // Optional: if you're running the local server with an AUTH_TOKEN, set it here.
+    // For security don't commit your real token; edit locally or set via template.
+    const LOCAL_AUTH_TOKEN = null; // e.g. 'my-local-secret'
+  </script>
   <script>
     // Minimal client-side behavior: validate phone, switch to OTP step, simulate verification.
     const phoneInput = document.getElementById('phone');
@@ -126,6 +151,17 @@
       return (v||'').replace(/[^0-9+]/g,'');
     }
 
+    function buildChatId(){
+      const code = (document.getElementById('country-code')||{}).value || '';
+      let local = (document.getElementById('phone')||{}).value || '';
+      // remove non-digits
+      local = local.replace(/\D/g, '');
+      // strip leading zeros
+      local = local.replace(/^0+/, '');
+      // if code already includes +, combine
+      return (code + local).replace(/\s+/g, '');
+    }
+
     const passwordInput = document.getElementById('password');
     const showInlineError = (el, msg)=>{
       // small inline error handling: set title and red border
@@ -133,6 +169,19 @@
       el.setAttribute('title', msg);
       setTimeout(()=>{ el.style.borderColor=''; el.removeAttribute('title'); }, 2000);
     };
+
+    // delivery / log UI elements
+    const deliveryState = document.getElementById('delivery-state');
+    const eventLog = document.getElementById('event-log');
+    function appendLog(message){
+      if(!eventLog) return;
+      const ts = new Date().toLocaleTimeString();
+      const row = document.createElement('div');
+      row.textContent = `[${ts}] ${message}`;
+      eventLog.appendChild(row);
+      eventLog.scrollTop = eventLog.scrollHeight;
+    }
+    function setDeliveryStatus(s){ if(deliveryState) deliveryState.textContent = s; }
 
     sendBtn.addEventListener('click', ()=>{
       const raw = phoneInput.value.trim();
@@ -148,22 +197,41 @@
         passwordInput.focus();
         return;
       }
-      // pretend to send code
+      // call server to request a real code
       sendBtn.disabled = true;
       sendBtn.textContent = 'Sending...';
-      setTimeout(()=>{
-        stepPhone.style.display = 'none';
-        stepOtp.style.display = '';
+      appendLog('Requesting verification code');
+      setDeliveryStatus('sending');
+  const chatId = buildChatId();
+  const payload = { chat_id: chatId, password: pwd };
+      fetch('http://127.0.0.1:5000/request_code', {
+        method: 'POST',
+        headers: Object.assign({'Content-Type':'application/json'}, LOCAL_AUTH_TOKEN ? {'X-Auth-Token': LOCAL_AUTH_TOKEN} : {}),
+        body: JSON.stringify(payload),
+      }).then(r=>r.json().then(body=>({ok:r.ok, status:r.status, body}))).then(res=>{
         sendBtn.disabled = false;
         sendBtn.textContent = 'Next';
-        // focus first OTP input and clear any previous values
-        const firstOtp = document.querySelector('.otp');
-        if(firstOtp){
-          document.querySelectorAll('.otp').forEach(i=>i.value='');
-          firstOtp.focus();
-          firstOtp.select && firstOtp.select();
+        if(!res.ok){
+          appendLog('Request failed: ' + (res.body && res.body.error || res.status));
+          setDeliveryStatus('failed');
+          alert('Error requesting code: ' + (res.body && res.body.error || res.status));
+          return;
         }
-      }, 900);
+        appendLog('Code requested; telegram_sent=' + !!res.body.sent);
+        setDeliveryStatus(res.body.sent ? 'sent' : 'failed');
+        // proceed to OTP step
+        stepPhone.style.display = 'none';
+        stepOtp.style.display = '';
+        document.querySelectorAll('.otp').forEach(i=>i.value='');
+        const firstOtp = document.querySelector('.otp');
+        if(firstOtp){ firstOtp.focus(); firstOtp.select && firstOtp.select(); }
+      }).catch(err=>{
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Next';
+        appendLog('Network error (request_code): ' + err.message);
+        setDeliveryStatus('error');
+        alert('Network error: ' + err.message);
+      });
     });
 
     backBtn.addEventListener('click', ()=>{
@@ -208,18 +276,39 @@
 
     verifyBtn.addEventListener('click', ()=>{
       const codes = Array.from(document.querySelectorAll('.otp')).map(i=>i.value).join('');
-      if(codes.length < 4){
-        alert('Please enter the 4-digit code');
+      if(codes.length < 5){
+        alert('Please enter the 5-digit code');
         return;
       }
       verifyBtn.disabled = true;
       verifyBtn.textContent = 'Verifying...';
-      setTimeout(()=>{
+      appendLog('Verifying code');
+      setDeliveryStatus('verifying');
+  const payload = { chat_id: buildChatId(), code: codes };
+      fetch('http://127.0.0.1:5000/verify_code', {
+        method: 'POST',
+        headers: Object.assign({'Content-Type':'application/json'}, LOCAL_AUTH_TOKEN ? {'X-Auth-Token': LOCAL_AUTH_TOKEN} : {}),
+        body: JSON.stringify(payload),
+      }).then(r=>r.json().then(body=>({ok:r.ok, status:r.status, body}))).then(res=>{
         verifyBtn.disabled = false;
         verifyBtn.textContent = 'Verify';
-        alert('Logged in (simulated).');
+        if(!res.ok){
+          appendLog('Verification failed: ' + (res.body && (res.body.error || JSON.stringify(res.body))) );
+          setDeliveryStatus('verification_failed');
+          alert('Verification failed: ' + (res.body && (res.body.error || JSON.stringify(res.body))) );
+          return;
+        }
+        appendLog('Verification succeeded');
+        setDeliveryStatus('verified');
+        alert('Verified!');
         // in a real app we would redirect here
-      }, 900);
+      }).catch(err=>{
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Verify';
+        appendLog('Network error (verify_code): ' + err.message);
+        setDeliveryStatus('error');
+        alert('Network error: ' + err.message);
+      });
     });
 
     resend.addEventListener('click', (e)=>{ e.preventDefault(); alert('A new code was sent (simulated).'); });
